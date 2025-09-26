@@ -1,7 +1,5 @@
 import {
-    RingingCall,
     StreamCall,
-    StreamTheme,
 } from "@stream-io/video-react-sdk";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
