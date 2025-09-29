@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react"
 import { type User } from "stream-chat";
 import { Channel, ChannelList, Thread, useChatContext } from "stream-chat-react";
-import 'stream-chat-react/dist/css/v2/index.css';
 
 import NoChannel from "@/components/NewChannel";
 import ChannelListHeader from "@/components/ChannelListHeader";

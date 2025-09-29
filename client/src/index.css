@@ -149,8 +149,43 @@
     width: 45%;
   }
 
-  .str-video{
+  .str-video {
     width: 100%;
+  }
+
+  .str-chat__main-panel {
+    min-width: 0;
+    flex: 1;
+
+    &--thread-open {
+      display: none;
+    }
+  }
+
+  .str-chat__thread {
+    flex: 1;
+    height: 100%;
+    position: fixed;
+    z-index: 1;
+  }
+
+  .str-chat__channel-header .str-chat__header-hamburger {
+    width: 30px;
+    height: 38px;
+    padding: var(--xxs-p);
+    margin-right: var(--xs-m);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+
+    &:hover {
+      svg path {
+        fill: var(--primary-color);
+      }
+    }
   }
 }
 

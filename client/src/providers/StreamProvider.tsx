@@ -4,6 +4,8 @@ import { useEffect, useState, type PropsWithChildren } from 'react';
 import { StreamChat } from 'stream-chat';
 import { Chat } from 'stream-chat-react';
 import "@stream-io/video-react-sdk/dist/css/styles.css";
+import "stream-chat-react/dist/css/v2/index.css";
+
 import { supabaseClient } from '@/clients/supabaseClient';
 
 const StreamProvider = ({ children }: PropsWithChildren) => {

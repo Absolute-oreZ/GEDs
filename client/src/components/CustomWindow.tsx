@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useChannelStateContext, useChatContext, MessageInput, MessageList, Window, Thread } from "stream-chat-react";
+import { useChannelStateContext, useChatContext, MessageInput, Window, Thread, VirtualizedMessageList } from "stream-chat-react";
 
 import {
     AlertDialog,
@@ -62,7 +62,7 @@ const CustomWindow = () => {
     return isMember ? <div className="w-full h-full">
         <Window>
             <ChannelHeader />
-            <MessageList />
+            <VirtualizedMessageList />
             <MessageInput focus />
         </Window>
         <Thread />
