@@ -1,5 +1,4 @@
 import { supabase } from "../config/supabase";
-import { uploadFile } from "./storage.service";
 import {
   GroupEngagementData,
   NewParticipantEngagementData,
@@ -7,12 +6,15 @@ import {
 } from "../types/engagement";
 import { computeOverallGroupEngagementAggregation } from "../utils/engagementCalculator";
 import { User } from "../types/user";
+import { uploadFile } from "./storage.service";
 
 interface CreateNewChannelProps {
-  channelName: string;
-  channelId: string;
-  imageUrl: string;
+  name: string;
   userId: string;
+  imageFile?: {
+    buffer: Buffer;
+    originalname: string;
+  };
 }
 
 interface CreateSessionProps {
@@ -41,9 +43,14 @@ interface CreateNewParticipantEngagementDataProps {
 }
 
 export async function createNewChannel(props: CreateNewChannelProps) {
+  const { name, userId, imageFile } = props;
+
   const { data: createdChannel, error: createChannelError } = await supabase
     .from("channel")
-    .insert(props)
+    .insert({
+      name,
+      image: "", 
+    })
     .select("*")
     .single();
 
@@ -51,17 +58,48 @@ export async function createNewChannel(props: CreateNewChannelProps) {
     throw createChannelError ?? new Error("No channel created");
   }
 
+  const channelId = createdChannel.id;
+
+  let imageUrl: string;
+
+  if (imageFile) {
+    const path = `channels/${channelId}/image-${Date.now()}-${
+      imageFile.originalname
+    }`;
+    imageUrl = await uploadFile(path, imageFile.buffer);
+  } else {
+    imageUrl = `https://placehold.co/600x400?text=${name.charAt(0)}`;
+  }
+
+  const { error: updateError } = await supabase
+    .from("channel")
+    .update({ image: imageUrl })
+    .eq("id", channelId);
+
+  if (updateError) {
+    await supabase.from("channel").delete().eq("id", channelId);
+    throw updateError;
+  }
+
   const { error: joinChannelError } = await supabase
     .from("channel_members")
     .insert([
-      { user_id: props.userId, channel_id: createdChannel.id, is_moderator: true },
+      {
+        user_id: userId,
+        channel_id: channelId,
+        is_moderator: true,
+      },
     ]);
 
   if (joinChannelError) {
-    // rollback
-    await supabase.from("channel").delete().eq("id", createdChannel.id);
+    await supabase.from("channel").delete().eq("id", channelId);
     throw joinChannelError;
   }
+
+  return {
+    id: channelId,
+    image: imageUrl,
+  };
 }
 
 export async function createNewSession(props: CreateSessionProps) {

@@ -2,35 +2,21 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     CallControls,
-    CallParticipantsList,
     CallingState,
     PaginatedGridLayout,
-    SpeakerLayout,
     useCallStateHooks,
 } from '@stream-io/video-react-sdk';
 import { ImStatsDots } from "react-icons/im";
-import { Users, LayoutList } from 'lucide-react';
 
 import { useFeatureExtractor } from '@/hooks/useFeatureExtractor';
 import { useEngagementModel } from '@/hooks/useEngagementModel';
 import { useStreamMediaStream } from '@/hooks/useStreamMediaStream';
-
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from './ui/dropdown-menu';
 
 import Loader from './Loader';
 import EndCallButton from './EndCallButton';
 import { supabaseClient } from '@/clients/supabaseClient';
 import { Button } from './ui/button';
 import EngagementVisualizationPanel from './EngagamenetVisualizationPanel';
-
-type CallLayoutType = 'grid' | 'speaker-left' | 'speaker-right';
-type PanelType = 'engagement' | 'participant';
 
 export type IndividualEngagementData = {
     timestamp: number;
@@ -42,8 +28,7 @@ const MeetingRoom = ({ callId }: { callId: string }) => {
     const WS_URL = import.meta.env.VITE_WEBSOCKET_URL;
     const navigate = useNavigate();
 
-    const [layout, setLayout] = useState<CallLayoutType>('speaker-left');
-    const [shownPanel, setShownPanel] = useState<PanelType | null>('engagement');
+    const [shownEngagementPanel, setShownEngagementPanel] = useState(true);
     const isProcessing = useRef(false);
 
     const { useCallCallingState, useCameraState } = useCallStateHooks();
@@ -211,83 +196,37 @@ const MeetingRoom = ({ callId }: { callId: string }) => {
         };
     }, [videoElement, isMediaPipeModelLoaded, isEngagementModelLoaded, cameraState.status, processFrame, predict]);
 
-    const CallLayout = () => {
-        switch (layout) {
-            case 'grid':
-                return <PaginatedGridLayout />;
-            case 'speaker-right':
-                return <SpeakerLayout participantsBarPosition="left" />;
-            default:
-                return <SpeakerLayout participantsBarPosition="right" />;
-        }
-    };
 
     if (callingState !== CallingState.JOINED) return <Loader />;
 
     return (
         <div className="flex items-center justify-center h-full w-full">
             <section className="w-full items-center justify-center relative">
-                {shownPanel === null ? (
-                    <div className="flex justify-center w-full">
-                        <div className="w-[78%]">
-                            <CallLayout />
-                        </div>
-                    </div>
-                ) : (
+                {shownEngagementPanel ? (
                     <div className="grid grid-cols-5 gap-2 w-full px-4">
                         <div className="col-span-4">
-                            <CallLayout />
+                            <PaginatedGridLayout />
                         </div>
-                        {shownPanel === 'participant' && (
-                            <div className="col-span-1 p-2 border border-gray-400 rounded-xl">
-                                <CallParticipantsList onClose={() => setShownPanel(null)} />
-                            </div>
-                        )}
-                        {shownPanel === 'engagement' && (
-                            <EngagementVisualizationPanel
-                                ws={ws}
-                                handleEngagementPanelClose={() => setShownPanel(null)}
-                            />
-                        )}
+                        <EngagementVisualizationPanel
+                            ws={ws}
+                            handleEngagementPanelClose={() => setShownEngagementPanel(false)}
+                        />
+                    </div>
+                ) : (
+                    <div className="flex justify-center w-full">
+                        <div className="w-[78%]">
+                            <PaginatedGridLayout />
+                        </div>
                     </div>
                 )}
 
                 <div className="flex items-center justify-center mt-4 gap-4">
                     <CallControls onLeave={() => navigate('/')} />
 
-                    <DropdownMenu>
-                        <DropdownMenuTrigger>
-                            <LayoutList size={20} />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                            {['Grid', 'Speaker-Left', 'Speaker-Right'].map((item, index) => (
-                                <div key={index}>
-                                    <DropdownMenuItem
-                                        onClick={() =>
-                                            setLayout(item.toLowerCase() as CallLayoutType)
-                                        }
-                                    >
-                                        {item}
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                </div>
-                            ))}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-
-                    <Button
-                        title='Participants'
-                        onClick={() => setShownPanel(shownPanel === 'participant' ? null : 'participant')}
-                        variant={shownPanel === 'participant' ? "default" : "ghost"}
-                        className='hover:cursor-pointer'
-                    >
-                        <Users size={20} />
-                    </Button>
-
                     <Button
                         title='Engagements'
-                        onClick={() => setShownPanel(shownPanel === 'engagement' ? null : 'engagement')}
-                        variant={shownPanel === 'engagement' ? "default" : "ghost"}
+                        onClick={() => setShownEngagementPanel(true)}
+                        variant={shownEngagementPanel ? "default" : "ghost"}
                         className='hover:cursor-pointer'
                     >
                         <ImStatsDots size={20} />

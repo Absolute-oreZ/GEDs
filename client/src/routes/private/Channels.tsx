@@ -68,7 +68,7 @@ const Channels = () => {
             {/* </Chat> */}
         </div>
     ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex h-full w-full items-center justify-center flex-col gap-3">
             <h2>Opps, seems like you are not in any channel yet</h2>
             <NoChannel onChannelCreated={handleChannelCreated} />
         </div>

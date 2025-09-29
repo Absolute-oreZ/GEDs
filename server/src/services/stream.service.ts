@@ -8,7 +8,7 @@ import {
   UserRequest,
 } from "@stream-io/node-sdk";
 
-import { stream } from "../config/stream";
+import { chatClient, stream } from "../config/stream";
 import { extractCallIdFromCid } from "../utils/streamUtil";
 import {
   sessionCaptionSummaryCache,
@@ -37,24 +37,20 @@ export async function upsertUser(userId: string, username: string) {
 }
 
 export async function createStreamChannel(
+  channelId: string,
   channelName: string,
   imageUrl: string,
   userId: string
 ) {
-  const streamChannel: StreamChannel = {
+  const streamChannel = chatClient.channel("messaging",channelId,{
     // @ts-ignore
     name: channelName,
     image: imageUrl,
     members: [userId],
-    created_by_id: userId,
-  };
+    created_by_id: userId
+  })
 
-  const channel = await streamChannel.getOrCreate();
-  if (!channel.channel) {
-    throw new Error("Error getting or creating channel");
-  }
-
-  return channel.channel.id;
+  await streamChannel.create();
 }
 
 export const handleCallCreatedEvent = async (event: CallCreatedEvent) => {
