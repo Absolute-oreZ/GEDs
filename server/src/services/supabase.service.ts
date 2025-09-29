@@ -7,6 +7,7 @@ import {
 import { computeOverallGroupEngagementAggregation } from "../utils/engagementCalculator";
 import { User } from "../types/user";
 import { uploadFile } from "./storage.service";
+import { upsertUser } from "./stream.service";
 
 interface CreateNewChannelProps {
   name: string;
@@ -49,7 +50,7 @@ export async function createNewChannel(props: CreateNewChannelProps) {
     .from("channel")
     .insert({
       name,
-      image: "", 
+      image: "",
     })
     .select("*")
     .single();
@@ -103,10 +104,13 @@ export async function createNewChannel(props: CreateNewChannelProps) {
 }
 
 export async function createNewSession(props: CreateSessionProps) {
-  const { error } = await supabase.from("session").insert([props]);
+  const { error } = await supabase.from("session").upsert([props], {
+    onConflict: "id",
+    ignoreDuplicates: true,
+  });
 
   if (error) {
-    console.error("ERROR creating new session: ", error);
+    console.error("Error inserting new session:", error);
     throw error;
   }
 }
@@ -253,6 +257,8 @@ export async function getUserById(userId: string): Promise<User> {
   if (error) {
     throw error;
   }
+
+  await upsertUser(data.id,data.username);
 
   return data;
 }

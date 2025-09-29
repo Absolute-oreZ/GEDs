@@ -4,6 +4,7 @@ import { FaGithub, FaGoogle } from "react-icons/fa";
 
 import { signUpWithEmail, signInWithProvider } from '../../services/authService';
 import Loader from '../../components/Loader';
+import { upsertStreamUser } from '@/services/userService';
 
 const SignUp = () => {
     const [email, setEmail] = useState("");
@@ -17,16 +18,26 @@ const SignUp = () => {
         setErrorMsg("");
         setLoading(true);
 
-        const { error } = await signUpWithEmail(email, password);
+        const { data, error } = await signUpWithEmail(email, password);
 
         if (error) {
-            setErrorMsg(error.message);
+            setErrorMsg(error ? error.message : "Error signing up");
             setLoading(false);
         } else {
             setSuccessMsg(
                 "Thanks for signing up! We've sent a confirmation email to your inbox. Please verify your email to activate your account."
             );
         }
+
+        const userId = data.user?.id;
+        const username = data.user?.email?.split("@")[0];
+
+        if(!userId || !username){
+            setErrorMsg("userId missing");
+            return;
+        }
+
+        await upsertStreamUser(userId,username);
 
         setLoading(false);
     };

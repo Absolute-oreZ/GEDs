@@ -4,6 +4,8 @@ import { GiPlagueDoctorProfile } from "react-icons/gi";
 
 import { signOut } from "../services/authService";
 import { VideoIcon } from "lucide-react";
+import { useChatContext } from "stream-chat-react";
+import { useStreamVideoClient } from "@stream-io/video-react-sdk";
 
 const navLinks = [
     {
@@ -22,6 +24,16 @@ const navLinks = [
         tooltip: "My Profile",
     },
 ];
+
+const handleSignOut = async () => {
+    const { client: chatClient } = useChatContext();
+    const videoClient  = useStreamVideoClient();
+    
+    await chatClient.disconnectUser();
+    await videoClient?.disconnectUser();
+    
+    signOut();
+};
 
 const LeftSideBar = () => {
     const location = useLocation();
@@ -51,7 +63,7 @@ const LeftSideBar = () => {
             </div>
 
             <button
-                onClick={signOut}
+                onClick={handleSignOut}
                 className="group relative flex items-center justify-center p-3 rounded-md text-gray-400 hover:bg-red-600 hover:text-white transition"
                 aria-label="Logout"
             >
