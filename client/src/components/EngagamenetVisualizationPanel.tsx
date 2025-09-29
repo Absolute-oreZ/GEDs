@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { IoCloseOutline } from "react-icons/io5";
 import { Line } from "react-chartjs-2";
 import {
@@ -39,9 +39,9 @@ export type WSMessage =
 
 type CustomDataType = {
     label: string;
-    data: number[],
-    borderColor?: string,
-    backgroundColor?: string
+    data: number[];
+    borderColor?: string;
+    backgroundColor?: string;
 }
 
 export type WSEngagementPayload = {
@@ -51,33 +51,35 @@ export type WSEngagementPayload = {
         engagementScore: number;
     }[][];
 };
+
 const colorPalette = [
-    { borderColor: 'rgb(54, 162, 235)', backgroundColor: 'rgba(54, 162, 235, 0.5)' }, // Blue
-    { borderColor: 'rgb(255, 206, 86)', backgroundColor: 'rgba(255, 206, 86, 0.5)' }, // Yellow
-    { borderColor: 'rgb(75, 192, 192)', backgroundColor: 'rgba(75, 192, 192, 0.5)' }, // Teal
-    { borderColor: 'rgb(153, 102, 255)', backgroundColor: 'rgba(153, 102, 255, 0.5)' }, // Purple
-    { borderColor: 'rgb(255, 159, 64)', backgroundColor: 'rgba(255, 159, 64, 0.5)' }, // Orange
+    { borderColor: 'rgb(54, 162, 235)', backgroundColor: 'rgba(54, 162, 235, 0.5)' },
+    { borderColor: 'rgb(255, 206, 86)', backgroundColor: 'rgba(255, 206, 86, 0.5)' },
+    { borderColor: 'rgb(75, 192, 192)', backgroundColor: 'rgba(75, 192, 192, 0.5)' },
+    { borderColor: 'rgb(153, 102, 255)', backgroundColor: 'rgba(153, 102, 255, 0.5)' },
+    { borderColor: 'rgb(255, 159, 64)', backgroundColor: 'rgba(255, 159, 64, 0.5)' },
 ];
 
 const EngagementVisualizationPanel = ({ ws, handleEngagementPanelClose }: { ws: React.RefObject<WebSocket | null>, handleEngagementPanelClose: () => void }) => {
-    const participantMap: { [username: string]: CustomDataType } = {}
-    const meanData: CustomDataType = {
+
+    const { useParticipantCount } = useCallStateHooks();
+
+    const participantCount = useParticipantCount();
+
+    const participantMapRef = useRef<{ [username: string]: CustomDataType }>({});
+
+    const meanDataRef = useRef<CustomDataType>({
         label: "Average Engagement Class",
         data: [],
         borderColor: 'rgb(255, 99, 132)',
         backgroundColor: 'rgba(255, 99, 132, 0.5)',
-    }
+    });
 
     const [recommendation, setRecommendation] = useState<string[]>([]);
-    const [chartData, setchartData] = useState<ChartData<"line", number[], string>>({
+    const [chartData, setChartData] = useState<ChartData<"line", number[], string>>({
         labels: [],
         datasets: []
     });
-
-    const { useParticipants, useParticipantCount } = useCallStateHooks();
-
-    const participantCount = useParticipantCount();
-    const participants = useParticipants();
 
     const options = {
         responsive: true,
@@ -99,17 +101,6 @@ const EngagementVisualizationPanel = ({ ws, handleEngagementPanelClose }: { ws: 
                 max: 100,
                 display: true,
                 position: 'left' as const,
-                // ticks: {
-                //     callback: function (
-                //         tickValue: string | number,
-                //     ): string | null {
-                //         if (typeof tickValue === 'number' && [1, 2, 3].includes(tickValue)) {
-                //             return tickValue.toString();
-                //         }
-                //         return '';
-                //     },
-                //     stepSize: 1,
-                // },
             },
             x: {
                 display: false
@@ -117,34 +108,42 @@ const EngagementVisualizationPanel = ({ ws, handleEngagementPanelClose }: { ws: 
         },
     };
 
-    const parseEngagementata = (engagementData: WSEngagementPayload) => {
+    const parseEngagementData = (engagementData: WSEngagementPayload) => {
         const groupData = engagementData.groupData;
         const participantData = engagementData.participantData;
         const labels: string[] = [];
 
+        let colorIndex = Object.keys(participantMapRef.current).length;
+
         participantData.forEach((timestamp) => {
             timestamp.forEach((p) => {
-                participantMap[p.username].data.push(p.engagementScore * 100);
-            })
-        })
+                if (!participantMapRef.current[p.username]) {
+                    const color = colorPalette[colorIndex % colorPalette.length];
+                    participantMapRef.current[p.username] = {
+                        label: p.username,
+                        data: [],
+                        borderColor: color.borderColor,
+                        backgroundColor: color.backgroundColor,
+                    };
+                    colorIndex++;
+                }
+
+                participantMapRef.current[p.username].data.push(p.engagementScore * 100);
+            });
+        });
 
         groupData.forEach((e) => {
-            meanData.data.push(e.engagement_score_mean * 100);
+            meanDataRef.current.data.push(e.engagement_score_mean * 100);
             labels.push('');
-        })
+        });
 
-        const datasets = [];
-        for (const username in participantMap) {
-            datasets.push(participantMap[username]);
-        }
-        datasets.push(meanData);
+        const datasets = Object.values(participantMapRef.current);
+        datasets.push(meanDataRef.current);
 
-        const currChartData: ChartData<"line", number[], string> = {
+        setChartData({
             labels,
             datasets
-        }
-
-        setchartData(currChartData);
+        });
     }
 
     useEffect(() => {
@@ -153,7 +152,7 @@ const EngagementVisualizationPanel = ({ ws, handleEngagementPanelClose }: { ws: 
         const handleMessage = (e: MessageEvent) => {
             const message: WSMessage = JSON.parse(e.data);
             if (message.messageType === 'GROUP_ENGAGEMENT_DATA') {
-                parseEngagementata(message.content as WSEngagementPayload);
+                parseEngagementData(message.content as WSEngagementPayload);
             } else {
                 setRecommendation(message.content as string[]);
             }
@@ -161,26 +160,10 @@ const EngagementVisualizationPanel = ({ ws, handleEngagementPanelClose }: { ws: 
 
         ws.current.addEventListener("message", handleMessage);
 
-        let colorIndex = 0;
-        const setUpParticipantMap = () => {
-            participants.forEach((p) => {
-                const color = colorPalette[colorIndex++];
-
-                participantMap[p.name] = {
-                    label: p.name,
-                    data: [],
-                    borderColor: color.borderColor,
-                    backgroundColor: color.backgroundColor,
-                };
-            });
-        };
-
-        setUpParticipantMap();
-
         return () => {
             ws.current?.removeEventListener("message", handleMessage);
-        }
-    }, [ws])
+        };
+    }, [ws]);
 
     return (
         <div className='col-span-1 p-2 border-1 border-gray-400 rounded-xl'>

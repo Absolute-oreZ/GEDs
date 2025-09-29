@@ -25,18 +25,17 @@ const navLinks = [
     },
 ];
 
-const handleSignOut = async () => {
-    const { client: chatClient } = useChatContext();
-    const videoClient  = useStreamVideoClient();
-    
-    await chatClient.disconnectUser();
-    await videoClient?.disconnectUser();
-    
-    signOut();
-};
 
 const LeftSideBar = () => {
     const location = useLocation();
+    const { client: chatClient } = useChatContext();
+    const videoClient = useStreamVideoClient();
+
+    const handleSignOut = async () => {
+        await chatClient.disconnectUser();
+        await videoClient?.disconnectUser();
+        signOut();
+    };
 
     return (
         <div className="h-screen w-[70px] bg-sidebar-accent text-sidebar-accent-foreground border-1 border-sidebar-border ring-1 ring-sidebar-ring flex flex-col justify-between items-center py-10 shadow-md">
@@ -48,8 +47,8 @@ const LeftSideBar = () => {
                             key={to}
                             to={to}
                             className={`group relative flex items-center justify-center p-3 rounded-md transition ${isActive
-                                    ? "bg-gray-700 text-white"
-                                    : "text-gray-700 hover:bg-gray-100"
+                                ? "bg-gray-700 text-white"
+                                : "text-gray-700 hover:bg-gray-100"
                                 }`}
                             aria-label={tooltip}
                         >
